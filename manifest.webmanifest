@@ -1,0 +1,11 @@
+{
+  "name":"ARC — Habit Tracker",
+  "short_name":"ARC",
+  "description":"Minimal glass habit, prayer, fitness and productivity tracker.",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#040607",
+  "theme_color":"#050708",
+  "orientation":"portrait",
+  "icons":[{"src":"icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
