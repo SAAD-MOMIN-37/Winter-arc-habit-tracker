@@ -1,4 +1,4 @@
-const CACHE = "arc-v2";
+const CACHE = "arc-v3";
 
 const ASSETS = [
   "./",
@@ -9,56 +9,120 @@ const ASSETS = [
   "./icons/icon.svg"
 ];
 
-self.addEventListener("install", e => {
+/* =========================
+   INSTALL
+========================= */
 
-  e.waitUntil(
+self.addEventListener("install", event => {
+  event.waitUntil(
     caches
       .open(CACHE)
-      .then(c => c.addAll(ASSETS))
+      .then(cache => cache.addAll(ASSETS))
       .then(() => self.skipWaiting())
   );
-
 });
 
+/* =========================
+   ACTIVATE
+========================= */
 
-self.addEventListener("activate", e => {
-
-  e.waitUntil(
-
+self.addEventListener("activate", event => {
+  event.waitUntil(
     caches
       .keys()
       .then(keys =>
         Promise.all(
-
           keys
-            .filter(k => k !== CACHE)
-            .map(k =>
-              caches.delete(k)
-            )
-
+            .filter(key => key !== CACHE)
+            .map(key => caches.delete(key))
         )
       )
-      .then(() =>
-        self.clients.claim()
-      )
-
+      .then(() => self.clients.claim())
   );
-
 });
 
+/* =========================
+   FETCH
+========================= */
 
-self.addEventListener("fetch", e => {
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) {
+        return cached;
+      }
 
-  e.respondWith(
+      return fetch(event.request)
+        .then(response => {
+          if (
+            !response ||
+            response.status !== 200 ||
+            response.type === "opaque"
+          ) {
+            return response;
+          }
 
-    caches
-      .match(e.request)
-      .then(
-        r =>
-          r ||
-          fetch(e.request)
-      )
+          const copy = response.clone();
 
+          caches.open(CACHE).then(cache => {
+            cache.put(
+              event.request,
+              copy
+            );
+          });
+
+          return response;
+        })
+        .catch(() =>
+          caches.match("./index.html")
+        );
+    })
   );
-
 });
+
+/* =========================
+   NOTIFICATION CLICK
+========================= */
+
+self.addEventListener(
+  "notificationclick",
+  event => {
+    event.notification.close();
+
+    event.waitUntil(
+      clients
+        .matchAll({
+          type: "window",
+          includeUncontrolled: true
+        })
+        .then(clientList => {
+          for (const client of clientList) {
+            if ("focus" in client) {
+              return client.focus();
+            }
+          }
+
+          if (clients.openWindow) {
+            return clients.openWindow("./");
+          }
+        })
+    );
+  }
+);
+
+/* =========================
+   MESSAGE
+========================= */
+
+self.addEventListener(
+  "message",
+  event => {
+    if (
+      event.data &&
+      event.data.type ===
+        "SKIP_WAITING"
+    ) {
+      self.skipWaiting();
+    }
+  }
+);
